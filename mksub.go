@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-
 func main() {
 	domain := flag.String("d", "", "Input domain")
 	domainFile := flag.String("df", "", "Input domain file, one domain per line")
@@ -71,18 +70,19 @@ func main() {
 
 	for scanner.Scan() {
 		word := strings.ToLower(scanner.Text())
+		word = strings.Trim(word, ".")
 		if reg != nil {
 			if !reg.Match([]byte(word)) {
 				continue
 			}
 		}
-		if _, isOld := wordSet[word]; word != "" && !isOld  {
+		if _, isOld := wordSet[word]; word != "" && !isOld {
 			wordSet[word] = true
 		}
 	}
 
 	results := make([]string, 0)
-	for i:=0; i<*level; i+=1 {
+	for i := 0; i < *level; i += 1 {
 		toMerge := results[0:]
 		if len(toMerge) == 0 {
 			for word := range wordSet {
