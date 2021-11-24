@@ -133,6 +133,7 @@ func main() {
 	scanner := bufio.NewScanner(wordlistFile)
 	for scanner.Scan() {
 		word := strings.ToLower(scanner.Text())
+		word = strings.Trim(word, ".")
 		if reg != nil {
 			if !reg.Match([]byte(word)) {
 				continue
