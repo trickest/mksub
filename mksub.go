@@ -22,7 +22,7 @@ var (
 	inputDomains     []string
 	wordSet          map[string]bool
 	outputChannel    chan string
-	concurrencyLevel = 100
+	concurrencyLevel = 100000
 )
 
 func fileReadDomain(fileName string) {
@@ -60,6 +60,7 @@ func processWordList(domain string, wg *sync.WaitGroup) {
 	results := make([]string, 0)
 	for word := range wordSet {
 		results = append(results, word)
+		outputChannel <- word + "." + domain
 	}
 	toMerge := results[0:]
 
@@ -68,14 +69,10 @@ func processWordList(domain string, wg *sync.WaitGroup) {
 		for _, sd := range toMerge {
 			for word := range wordSet {
 				results = append(results, word+"."+sd)
+				outputChannel <- word + "." + sd + "." + domain
 			}
 		}
 	}
-
-	for _, subdomain := range results {
-		outputChannel <- subdomain + "." + domain
-	}
-
 }
 
 func writeOutput(wg *sync.WaitGroup) {
@@ -144,7 +141,7 @@ func main() {
 		}
 	}
 
-	outputChannel = make(chan string, concurrencyLevel)
+	outputChannel = make(chan string, concurrencyLevel*len(inputDomains))
 
 	var outWg sync.WaitGroup
 	var inWg sync.WaitGroup
