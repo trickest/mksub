@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"regexp"
 	"strings"
+	"syscall"
 )
 
 func main() {
@@ -17,6 +19,15 @@ func main() {
 	level := flag.Int("l", 1, "Subdomain level to generate (default 1)")
 	output := flag.String("o", "", "Output file (optional)")
 	flag.Parse()
+
+	go func() {
+		signalChannel := make(chan os.Signal, 1)
+		signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+		<-signalChannel
+
+		fmt.Println("Program interrupted, exiting...")
+		os.Exit(0)
+	}()
 
 	inputDomains := make([]string, 0)
 	if *domain != "" {
