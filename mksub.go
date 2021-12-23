@@ -171,7 +171,7 @@ func main() {
 		}
 	}
 
-	outputChannel = make(chan string, uint64(maxConcurrencyLevel)*factorial(len(wordSet)+*level-1)/factorial(len(wordSet)-1)/factorial(*level))
+	outputChannel = make(chan string, maxConcurrencyLevel)
 
 	var outWg sync.WaitGroup
 	var inWg sync.WaitGroup
