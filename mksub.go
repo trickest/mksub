@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 )
 
 var (
@@ -19,10 +21,10 @@ var (
 	level      *int
 	output     *string
 
-	inputDomains     []string
-	wordSet          map[string]bool
-	outputChannel    chan string
-	concurrencyLevel = 100000
+	inputDomains        chan string
+	wordSet             map[string]bool
+	outputChannel       chan string
+	maxConcurrencyLevel = 1000000
 )
 
 func fileReadDomain(fileName string) {
@@ -34,8 +36,10 @@ func fileReadDomain(fileName string) {
 
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
-		inputDomains = append(inputDomains, strings.TrimSpace(scanner.Text()))
+		inputDomains <- strings.TrimSpace(scanner.Text())
 	}
+
+	close(inputDomains)
 }
 
 func prepareDomains() {
@@ -44,9 +48,9 @@ func prepareDomains() {
 		os.Exit(1)
 	}
 
-	inputDomains = make([]string, 0)
+	inputDomains = make(chan string, maxConcurrencyLevel)
 	if *domain != "" {
-		inputDomains = append(inputDomains, *domain)
+		inputDomains <- *domain
 	} else {
 		if *domainFile != "" {
 			fileReadDomain(*domainFile)
@@ -98,15 +102,41 @@ func writeOutput(wg *sync.WaitGroup) {
 
 }
 
+func factorial(n int) uint64 {
+	var factVal uint64 = 1
+
+	if n < 0 {
+		fmt.Print("Factorial of a negative number doesn't exist.")
+	} else {
+		for i := 1; i <= n; i++ {
+			factVal *= uint64(i)
+		}
+	}
+	return factVal
+}
+
 func main() {
 	domain = flag.String("d", "", "Input domain")
 	domainFile = flag.String("df", "", "Input domain file, one domain per line")
 	wordlist = flag.String("w", "", "Wordlist file")
 	regex = flag.String("r", "", "Regex to filter words from wordlist file")
-	level = flag.Int("l", 1, "Subdomain level to generate (default 1)")
+	level = flag.Int("l", 1, "Subdomain level to generate")
 	output = flag.String("o", "", "Output file (optional)")
 	flag.Parse()
 
+	go func() {
+		signalChannel := make(chan os.Signal, 1)
+		signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+		<-signalChannel
+
+		fmt.Println("Program interrupted, exiting...")
+		os.Exit(0)
+	}()
+
+	if *level <= 0 {
+		fmt.Println("Level must be a positive integer!")
+		os.Exit(1)
+	}
 	prepareDomains()
 
 	var reg *regexp.Regexp
@@ -141,7 +171,7 @@ func main() {
 		}
 	}
 
-	outputChannel = make(chan string, concurrencyLevel*len(inputDomains))
+	outputChannel = make(chan string, uint64(maxConcurrencyLevel)*factorial(len(wordSet)+*level-1)/factorial(len(wordSet)-1)/factorial(*level))
 
 	var outWg sync.WaitGroup
 	var inWg sync.WaitGroup
@@ -149,7 +179,7 @@ func main() {
 	outWg.Add(1)
 	go writeOutput(&outWg)
 
-	for _, dom := range inputDomains {
+	for dom := range inputDomains {
 		inWg.Add(1)
 		go processWordList(dom, &inWg)
 	}
