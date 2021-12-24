@@ -20,11 +20,13 @@ var (
 	regex      *string
 	level      *int
 	output     *string
+	threads    *int
 
 	inputDomains        chan string
 	wordSet             map[string]bool
 	outputChannel       chan string
 	maxConcurrencyLevel = 1000000
+	threadSemaphore     chan bool
 )
 
 func fileReadDomain(fileName string) {
@@ -60,16 +62,18 @@ func prepareDomains() {
 
 func processWordList(domain string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer func() {
+		<-threadSemaphore
+	}()
 
 	results := make([]string, 0)
 	for word := range wordSet {
 		results = append(results, word)
 		outputChannel <- word + "." + domain
 	}
-	toMerge := results[0:]
 
 	for i := 0; i < *level-1; i++ {
-		toMerge = results[0:]
+		toMerge := results[0:]
 		for _, sd := range toMerge {
 			for word := range wordSet {
 				results = append(results, word+"."+sd)
@@ -102,19 +106,6 @@ func writeOutput(wg *sync.WaitGroup) {
 
 }
 
-func factorial(n int) uint64 {
-	var factVal uint64 = 1
-
-	if n < 0 {
-		fmt.Print("Factorial of a negative number doesn't exist.")
-	} else {
-		for i := 1; i <= n; i++ {
-			factVal *= uint64(i)
-		}
-	}
-	return factVal
-}
-
 func main() {
 	domain = flag.String("d", "", "Input domain")
 	domainFile = flag.String("df", "", "Input domain file, one domain per line")
@@ -122,6 +113,7 @@ func main() {
 	regex = flag.String("r", "", "Regex to filter words from wordlist file")
 	level = flag.Int("l", 1, "Subdomain level to generate")
 	output = flag.String("o", "", "Output file (optional)")
+	threads = flag.Int("t", 100, "Number of threads to be used (maximum 1000000)")
 	flag.Parse()
 
 	go func() {
@@ -133,11 +125,17 @@ func main() {
 		os.Exit(0)
 	}()
 
-	if *level <= 0 {
-		fmt.Println("Level must be a positive integer!")
+	if *level <= 0 || *threads <= 0 {
+		fmt.Println("Subdomain level and number of threads must be positive integers!")
 		os.Exit(1)
 	}
-	prepareDomains()
+
+	if *threads > maxConcurrencyLevel {
+		fmt.Println("Number of threads greater than the maximum number allowed (1000000)!")
+		os.Exit(1)
+	}
+
+	go prepareDomains()
 
 	var reg *regexp.Regexp
 	var err error
@@ -171,7 +169,7 @@ func main() {
 		}
 	}
 
-	outputChannel = make(chan string, maxConcurrencyLevel)
+	outputChannel = make(chan string, *threads*maxConcurrencyLevel)
 
 	var outWg sync.WaitGroup
 	var inWg sync.WaitGroup
@@ -179,8 +177,11 @@ func main() {
 	outWg.Add(1)
 	go writeOutput(&outWg)
 
+	threadSemaphore = make(chan bool, maxConcurrencyLevel)
+
 	for dom := range inputDomains {
 		inWg.Add(1)
+		threadSemaphore <- true
 		go processWordList(dom, &inWg)
 	}
 
