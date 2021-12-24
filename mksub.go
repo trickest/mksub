@@ -73,8 +73,8 @@ func processWordList(domain string, wg *sync.WaitGroup) {
 	}
 
 	for i := 0; i < *level-1; i++ {
-		toMerge := results[0:]
-		for _, sd := range toMerge {
+		for j := 0; j < len(results)-j*len(wordSet); j++ {
+			sd := results[j]
 			for word := range wordSet {
 				results = append(results, word+"."+sd)
 				outputChannel <- word + "." + sd + "." + domain
