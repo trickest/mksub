@@ -8,16 +8,111 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 )
 
+var (
+	//flags
+	domain     *string
+	domainFile *string
+	wordlist   *string
+	regex      *string
+	level      *int
+	output     *string
+	threads    *int
+
+	inputDomains        chan string
+	wordSet             map[string]bool
+	outputChannel       chan string
+	maxConcurrencyLevel = 1000000
+	threadSemaphore     chan bool
+)
+
+func fileReadDomain(fileName string) {
+	inputFile, err := os.Open(fileName)
+	if err != nil {
+		panic("Could not open file to read domains!")
+	}
+	defer inputFile.Close()
+
+	scanner := bufio.NewScanner(inputFile)
+	for scanner.Scan() {
+		inputDomains <- strings.TrimSpace(scanner.Text())
+	}
+
+	close(inputDomains)
+}
+
+func prepareDomains() {
+	if *domain == "" && *domainFile == "" {
+		fmt.Println("No domain input provided")
+		os.Exit(1)
+	}
+
+	inputDomains = make(chan string, maxConcurrencyLevel)
+	if *domain != "" {
+		inputDomains <- *domain
+	} else {
+		if *domainFile != "" {
+			fileReadDomain(*domainFile)
+		}
+	}
+}
+
+func processWordList(domain string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer func() {
+		<-threadSemaphore
+	}()
+
+	results := make([]string, 0)
+	for word := range wordSet {
+		results = append(results, word)
+		outputChannel <- word + "." + domain
+	}
+
+	for i := 0; i < *level-1; i++ {
+		for j := 0; j < len(results)-j*len(wordSet); j++ {
+			sd := results[j]
+			for word := range wordSet {
+				results = append(results, word+"."+sd)
+				outputChannel <- word + "." + sd + "." + domain
+			}
+		}
+	}
+}
+
+func writeOutput(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	var outputFile *os.File
+	var err error
+	if *output != "" {
+		outputFile, err = os.Create(*output)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		defer outputFile.Close()
+	}
+
+	for data := range outputChannel {
+		fmt.Println(data)
+		if outputFile != nil {
+			_, _ = outputFile.WriteString(data + "\n")
+		}
+	}
+}
+
 func main() {
-	domain := flag.String("d", "", "Input domain")
-	domainFile := flag.String("df", "", "Input domain file, one domain per line")
-	wordlist := flag.String("w", "", "Wordlist file")
-	r := flag.String("r", "", "Regex to filter words from wordlist file")
-	level := flag.Int("l", 1, "Subdomain level to generate (default 1)")
-	output := flag.String("o", "", "Output file (optional)")
+	domain = flag.String("d", "", "Input domain")
+	domainFile = flag.String("df", "", "Input domain file, one domain per line")
+	wordlist = flag.String("w", "", "Wordlist file")
+	regex = flag.String("r", "", "Regex to filter words from wordlist file")
+	level = flag.Int("l", 1, "Subdomain level to generate")
+	output = flag.String("o", "", "Output file (optional)")
+	threads = flag.Int("t", 100, "Number of threads to be used (maximum 1000000)")
 	flag.Parse()
 
 	go func() {
@@ -29,25 +124,26 @@ func main() {
 		os.Exit(0)
 	}()
 
-	inputDomains := make([]string, 0)
-	if *domain != "" {
-		inputDomains = append(inputDomains, *domain)
+	if *level <= 0 || *threads <= 0 {
+		fmt.Println("Subdomain level and number of threads must be positive integers!")
+		os.Exit(1)
 	}
-	if *domainFile != "" {
-		inputFile, err := os.Open(*domainFile)
+
+	if *threads > maxConcurrencyLevel {
+		fmt.Println("Number of threads greater than the maximum number allowed (1000000)!")
+		os.Exit(1)
+	}
+
+	go prepareDomains()
+
+	var reg *regexp.Regexp
+	var err error
+	if *regex != "" {
+		reg, err = regexp.Compile(*regex)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
 		}
-		defer inputFile.Close()
-		scanner := bufio.NewScanner(inputFile)
-		for scanner.Scan() {
-			inputDomains = append(inputDomains, scanner.Text())
-		}
-	}
-	if len(inputDomains) == 0 {
-		fmt.Println("No input provided")
-		os.Exit(1)
 	}
 
 	wordlistFile, err := os.Open(*wordlist)
@@ -57,28 +153,8 @@ func main() {
 	}
 	defer wordlistFile.Close()
 
-	var reg *regexp.Regexp
-	if *r != "" {
-		reg, err = regexp.Compile(*r)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-	}
-
-	var outputFile *os.File
-	if *output != "" {
-		outputFile, err = os.Create(*output)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-		defer outputFile.Close()
-	}
-
-	wordSet := make(map[string]bool)
+	wordSet = make(map[string]bool)
 	scanner := bufio.NewScanner(wordlistFile)
-
 	for scanner.Scan() {
 		word := strings.ToLower(scanner.Text())
 		word = strings.Trim(word, ".")
@@ -87,32 +163,29 @@ func main() {
 				continue
 			}
 		}
-		if _, isOld := wordSet[word]; word != "" && !isOld {
+
+		if word != "" {
 			wordSet[word] = true
 		}
 	}
 
-	results := make([]string, 0)
-	for i := 0; i < *level; i += 1 {
-		toMerge := results[0:]
-		if len(toMerge) == 0 {
-			for word := range wordSet {
-				results = append(results, word)
-			}
-		} else {
-			for _, sd := range toMerge {
-				for word := range wordSet {
-					results = append(results, fmt.Sprintf("%s.%s", word, sd))
-				}
-			}
-		}
+	outputChannel = make(chan string, *threads*maxConcurrencyLevel)
+
+	var outWg sync.WaitGroup
+	var inWg sync.WaitGroup
+
+	outWg.Add(1)
+	go writeOutput(&outWg)
+
+	threadSemaphore = make(chan bool, maxConcurrencyLevel)
+
+	for dom := range inputDomains {
+		inWg.Add(1)
+		threadSemaphore <- true
+		go processWordList(dom, &inWg)
 	}
-	for _, domain := range inputDomains {
-		for _, subdomain := range results {
-			fmt.Println(subdomain + "." + domain)
-			if outputFile != nil {
-				_, _ = outputFile.WriteString(subdomain + "." + domain + "\n")
-			}
-		}
-	}
+
+	inWg.Wait()
+	close(outputChannel)
+	outWg.Wait()
 }

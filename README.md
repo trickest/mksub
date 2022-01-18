@@ -9,17 +9,19 @@ filtered using regex.
 ```
 Usage of mksub:
   -d string
-    	Input domain
+        Input domain
   -df string
-    	Input domain file, one domain per line
+        Input domain file, one domain per line
   -l int
-    	Subdomain level to generate (default 1) (default 1)
+        Subdomain level to generate (default 1)
   -o string
-    	Output file (optional)
+        Output file (optional)
   -r string
-    	Regex to filter words from wordlist file
+        Regex to filter words from wordlist file
+  -t int
+        Number of threads to be used (maximum 1000000) (default 100)
   -w string
-    	Wordlist file
+        Wordlist file
 ```
 
 ### Example
