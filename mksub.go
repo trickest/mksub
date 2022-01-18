@@ -103,7 +103,6 @@ func writeOutput(wg *sync.WaitGroup) {
 			_, _ = outputFile.WriteString(data + "\n")
 		}
 	}
-
 }
 
 func main() {
@@ -164,6 +163,7 @@ func main() {
 				continue
 			}
 		}
+
 		if word != "" {
 			wordSet[word] = true
 		}
