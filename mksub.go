@@ -40,8 +40,6 @@ func fileReadDomain(fileName string) {
 	for scanner.Scan() {
 		inputDomains <- strings.TrimSpace(scanner.Text())
 	}
-
-	close(inputDomains)
 }
 
 func prepareDomains() {
@@ -58,6 +56,8 @@ func prepareDomains() {
 			fileReadDomain(*domainFile)
 		}
 	}
+
+	close(inputDomains)
 }
 
 func processWordList(domain string, wg *sync.WaitGroup) {
