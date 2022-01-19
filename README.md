@@ -19,7 +19,7 @@ Usage of mksub:
   -r string
         Regex to filter words from wordlist file
   -t int
-        Number of threads to be used (maximum 1000000) (default 100)
+        Maximum number of threads to be used (default 200)
   -w string
         Wordlist file
 ```

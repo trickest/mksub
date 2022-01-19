@@ -151,7 +151,7 @@ func main() {
 	regex = flag.String("r", "", "Regex to filter words from wordlist file")
 	level = flag.Int("l", 1, "Subdomain level to generate")
 	output = flag.String("o", "", "Output file (optional)")
-	threads = flag.Int("t", 100, "Number of threads to be used (maximum 1000000)")
+	threads = flag.Int("t", 200, "Maximum number of threads to be used")
 	flag.Parse()
 
 	go func() {
@@ -184,7 +184,10 @@ func main() {
 	outWg.Add(1)
 	go writeOutput(&outWg)
 
-	threadSemaphore = make(chan bool, maxConcurrencyLevel)
+	if *threads > len(inputDomains) {
+		*threads = len(inputDomains)
+	}
+	threadSemaphore = make(chan bool, *threads)
 
 	for _, dom := range inputDomains {
 		inWg.Add(1)
