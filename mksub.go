@@ -138,7 +138,6 @@ func generateWordlistCombinations() {
 			sd := wordlistCombinations[j]
 			for word := range wordSet {
 				wordlistCombinations = append(wordlistCombinations, word+"."+sd)
-				outputChannel <- word + "." + sd
 			}
 		}
 	}
