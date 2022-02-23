@@ -20,6 +20,8 @@ Usage of mksub:
         Output folder (file(s) will use the same name) (default "mksub-out")
   -r string
         Regex to filter words from wordlist file
+  -silent
+        Skip writing generated subdomains to stdout (faster) (default true)
   -t int
         Number of threads for every subdomain level (default 100)
   -w string
