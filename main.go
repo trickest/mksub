@@ -8,6 +8,7 @@ import (
 	roundChan "mksub/round"
 	"os"
 	"os/signal"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,14 +28,14 @@ var (
 )
 
 var (
-	domain     string
-	domainFile string
-	wordlist   string
-	regex      string
-	nf         int
-	level      int
-	workers    int
-	outputFile string
+	domain       string
+	domainFile   string
+	wordlist     string
+	regex        string
+	nf           int
+	level        int
+	workers      int
+	outputFolder string
 
 	workerThreadMax = make(chan struct{}, maxWorkingThreads)
 	done            = make(chan struct{})
@@ -122,11 +123,15 @@ func spawnWriters(number int) {
 		var bf bytes.Buffer
 		ch := make(chan string, 100000)
 
-		fileName := outputFile
+		fileName := outputFolder
 		if number > 1 {
 			fileName += "-" + strconv.Itoa(i)
 		}
-		file, _ := os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+		file, err := os.Create(path.Join(outputFolder, fileName))
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("Couldn't open file to write output!")
+		}
 
 		wgWrite.Add(1)
 		go write(file, &bf, &ch)
@@ -209,7 +214,7 @@ func main() {
 	flag.StringVar(&wordlist, "w", "", "Wordlist file")
 	flag.StringVar(&regex, "r", "", "Regex to filter words from wordlist file")
 	flag.IntVar(&level, "l", 1, "Subdomain level to generate")
-	flag.StringVar(&outputFile, "o", "mksub-out", "Output file (optional)")
+	flag.StringVar(&outputFolder, "o", "mksub-out", "Output folder (file(s) will use the same name)")
 	flag.IntVar(&workers, "t", 100, "Number of threads for every subdomain level")
 	flag.IntVar(&nf, "nf", 1, "Number of files to split the output into (faster with multiple files)")
 	flag.Parse()
@@ -226,6 +231,18 @@ func main() {
 	if level <= 0 || workers <= 0 {
 		fmt.Println("Subdomain level and number of threads must be positive integers!")
 		os.Exit(0)
+	}
+
+	dirInfo, err := os.Stat(outputFolder)
+	dirExists := !os.IsNotExist(err) && dirInfo.IsDir()
+
+	if !dirExists {
+		err = os.Mkdir(outputFolder, 0755)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("Couldn't create a directory to store outputs!")
+			os.Exit(0)
+		}
 	}
 
 	prepareDomains()
