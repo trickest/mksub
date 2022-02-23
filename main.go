@@ -36,6 +36,7 @@ var (
 	level        int
 	workers      int
 	outputFolder string
+	silent       bool
 
 	workerThreadMax = make(chan struct{}, maxWorkingThreads)
 	done            = make(chan struct{})
@@ -186,6 +187,9 @@ func combo(_comb string, level int, wg *sync.WaitGroup, wt *chan struct{}) {
 	workerThreadMax <- struct{}{}
 
 	if strings.Count(_comb, ".") > 1 {
+		if !silent {
+			fmt.Print(_comb + "\n")
+		}
 		*robin.Next() <- _comb + "\n"
 	}
 
@@ -199,6 +203,9 @@ func combo(_comb string, level int, wg *sync.WaitGroup, wt *chan struct{}) {
 		}
 	} else {
 		for _, c := range words {
+			if !silent {
+				fmt.Print(c + "." + _comb + "\n")
+			}
 			*robin.Next() <- c + "." + _comb + "\n"
 		}
 	}
@@ -217,6 +224,7 @@ func main() {
 	flag.StringVar(&outputFolder, "o", "mksub-out", "Output folder (file(s) will use the same name)")
 	flag.IntVar(&workers, "t", 100, "Number of threads for every subdomain level")
 	flag.IntVar(&nf, "nf", 1, "Number of files to split the output into (faster with multiple files)")
+	flag.BoolVar(&silent, "silent", true, "Skip writing generated subdomains to stdout (faster)")
 	flag.Parse()
 
 	go func() {
