@@ -14,12 +14,16 @@ Usage of mksub:
         Input domain file, one domain per line
   -l int
         Subdomain level to generate (default 1)
+  -nf int
+        Number of files to split the output into (faster with multiple files) (default 1)
   -o string
-        Output file (optional)
+        Output folder (file(s) will use the same name) (default "mksub-out")
   -r string
         Regex to filter words from wordlist file
+  -silent
+        Skip writing generated subdomains to stdout (faster) (default true)
   -t int
-        Maximum number of threads to be used (default 200)
+        Number of threads for every subdomain level (default 100)
   -w string
         Wordlist file
 ```
