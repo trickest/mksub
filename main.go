@@ -8,7 +8,6 @@ import (
 	roundChan "mksub/round"
 	"os"
 	"os/signal"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 const (
 	bufferSizeMB      = 100
 	maxWorkingThreads = 100000
+	numberOfFiles     = 1
 )
 
 var (
@@ -28,16 +28,14 @@ var (
 )
 
 var (
-	domain       string
-	domainFile   string
-	wordlist     string
-	regex        string
-	nf           int
-	level        int
-	workers      int
-	outputFolder string
-	outputFile   string
-	silent       bool
+	domain     string
+	domainFile string
+	wordlist   string
+	regex      string
+	level      int
+	workers    int
+	outputFile string
+	silent     bool
 
 	workerThreadMax = make(chan struct{}, maxWorkingThreads)
 	done            = make(chan struct{})
@@ -135,7 +133,7 @@ func spawnWriters(number int) {
 			extension := "." + fileSplit[len(fileSplit)-1]
 			fileName = strings.TrimSuffix(fileName, extension) + "-" + strconv.Itoa(i) + extension
 		}
-		file, err := os.Create(path.Join(outputFolder, fileName))
+		file, err := os.Create(fileName)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println("Couldn't open file to write output!")
@@ -228,10 +226,8 @@ func main() {
 	flag.StringVar(&wordlist, "w", "", "Wordlist file")
 	flag.StringVar(&regex, "r", "", "Regex to filter words from wordlist file")
 	flag.IntVar(&level, "l", 1, "Subdomain level to generate")
-	flag.StringVar(&outputFolder, "o", "", "Output folder (stdout will be used when omitted)")
-	flag.StringVar(&outputFile, "file", "output.txt", "Output file(s) name")
+	flag.StringVar(&outputFile, "o", "", "Output file (stdout will be used when omitted)")
 	flag.IntVar(&workers, "t", 100, "Number of threads for every subdomain level")
-	flag.IntVar(&nf, "nf", 1, "Number of files to split the output into (faster with multiple files)")
 	flag.BoolVar(&silent, "silent", true, "Skip writing generated subdomains to stdout (faster)")
 	flag.Parse()
 
@@ -249,30 +245,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	if outputFolder == "" {
+	if outputFile == "" {
 		silent = false
-	} else {
-		dirPath := strings.Split(strings.Trim(outputFolder, "/"), "/")
-		toMerge := ""
-		for _, dir := range dirPath {
-			toMerge = path.Join(toMerge, dir)
-			dirInfo, err := os.Stat(toMerge)
-			dirExists := !os.IsNotExist(err) && dirInfo.IsDir()
-
-			if !dirExists {
-				err = os.Mkdir(toMerge, 0755)
-				if err != nil {
-					fmt.Println(err)
-					fmt.Println("Couldn't create a directory to store outputs!")
-					os.Exit(0)
-				}
-			}
-		}
 	}
 
 	prepareDomains()
 	readWordlistFile()
-	spawnWriters(nf)
+	spawnWriters(numberOfFiles)
 
 	for _, d := range inputDomains {
 		wg.Add(1)
@@ -282,6 +261,6 @@ func main() {
 	}
 
 	wg.Wait()
-	closeWriters(nf)
+	closeWriters(numberOfFiles)
 	wgWrite.Wait()
 }
