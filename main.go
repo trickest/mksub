@@ -36,6 +36,7 @@ var (
 	level        int
 	workers      int
 	outputFolder string
+	outputFile   string
 	silent       bool
 
 	workerThreadMax = make(chan struct{}, maxWorkingThreads)
@@ -124,9 +125,15 @@ func spawnWriters(number int) {
 		var bf bytes.Buffer
 		ch := make(chan string, 100000)
 
-		fileName := outputFolder
+		fileName := outputFile
+		fileSplit := strings.Split(fileName, ".")
+		if len(fileSplit) == 1 {
+			fileName += ".txt"
+		}
 		if number > 1 {
-			fileName += "-" + strconv.Itoa(i)
+			fileSplit = strings.Split(fileName, ".")
+			extension := "." + fileSplit[len(fileSplit)-1]
+			fileName = strings.TrimSuffix(fileName, extension) + "-" + strconv.Itoa(i) + extension
 		}
 		file, err := os.Create(path.Join(outputFolder, fileName))
 		if err != nil {
@@ -221,7 +228,8 @@ func main() {
 	flag.StringVar(&wordlist, "w", "", "Wordlist file")
 	flag.StringVar(&regex, "r", "", "Regex to filter words from wordlist file")
 	flag.IntVar(&level, "l", 1, "Subdomain level to generate")
-	flag.StringVar(&outputFolder, "o", "mksub-out", "Output folder (file(s) will use the same name)")
+	flag.StringVar(&outputFolder, "o", "", "Output folder (stdout will be used when omitted)")
+	flag.StringVar(&outputFile, "file", "output.txt", "Output file(s) name")
 	flag.IntVar(&workers, "t", 100, "Number of threads for every subdomain level")
 	flag.IntVar(&nf, "nf", 1, "Number of files to split the output into (faster with multiple files)")
 	flag.BoolVar(&silent, "silent", true, "Skip writing generated subdomains to stdout (faster)")
@@ -241,15 +249,24 @@ func main() {
 		os.Exit(0)
 	}
 
-	dirInfo, err := os.Stat(outputFolder)
-	dirExists := !os.IsNotExist(err) && dirInfo.IsDir()
+	if outputFolder == "" {
+		silent = false
+	} else {
+		dirPath := strings.Split(outputFolder, "/")
+		toMerge := ""
+		for _, dir := range dirPath {
+			toMerge = path.Join(toMerge, dir)
+			dirInfo, err := os.Stat(toMerge)
+			dirExists := !os.IsNotExist(err) && dirInfo.IsDir()
 
-	if !dirExists {
-		err = os.Mkdir(outputFolder, 0755)
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Couldn't create a directory to store outputs!")
-			os.Exit(0)
+			if !dirExists {
+				err = os.Mkdir(toMerge, 0755)
+				if err != nil {
+					fmt.Println(err)
+					fmt.Println("Couldn't create a directory to store outputs!")
+					os.Exit(0)
+				}
+			}
 		}
 	}
 
