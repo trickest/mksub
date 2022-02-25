@@ -252,7 +252,7 @@ func main() {
 	if outputFolder == "" {
 		silent = false
 	} else {
-		dirPath := strings.Split(outputFolder, "/")
+		dirPath := strings.Split(strings.Trim(outputFolder, "/"), "/")
 		toMerge := ""
 		for _, dir := range dirPath {
 			toMerge = path.Join(toMerge, dir)
