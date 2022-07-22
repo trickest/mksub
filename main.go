@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	roundChan "mksub/round"
 	"os"
 	"os/signal"
 	"regexp"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	roundChan "github.com/trickest/mksub/round"
 )
 
 const (

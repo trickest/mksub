@@ -1,3 +1,3 @@
-module mksub
+module github.com/trickest/mksub
 
-go 1.17
+go 1.18
