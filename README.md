@@ -13,7 +13,7 @@ When you use mksub's `-l` parameter, it will generate all subdomain combinations
 # Installation
 
 ## Binary
-Binaries are available in the [latest release](https://github.com/trickest/mksub/releases/latest)
+Binaries are available in the [latest release](https://github.com/trickest/mksub/releases/latest).
 
 ## Docker
 ```
@@ -55,7 +55,7 @@ foo.bar
 prod
 ```
 ```shell script
-> mksub -d example.com -l 2 -w input.txt -r "^[a-zA-Z0-9\.-_]+$"
+$ mksub -d example.com -l 2 -w input.txt -r "^[a-zA-Z0-9\.-_]+$"
 dev.example.com
 foo.bar.example.com
 prod.example.com
@@ -69,8 +69,12 @@ dev.prod.example.com
 foo.bar.prod.example.com
 prod.prod.example.com
 ```
-# Where does this fit in your methodology?
-Mksub is an integral part of the [Inventory](https://github.com/trickest/inventory) workflow and many other workflows in the Trickest store. Sign up on [trickest.com](https://trickest.com) to get access to these workflows or build your own from scratch!
-[<img src="./banner.png" />](https://trickest-access.paperform.co/)
+
 ## Report Bugs / Feedback
 We look forward to any feedback you want to share with us or if you're stuck with a problem you can contact us at [support@trickest.com](mailto:support@trickest.com). You can also create an [Issue](https://github.com/trickest/mksub/issues/new) or pull request on the Github repository.
+
+# Where does this fit in your methodology?
+Mksub is an integral part of the [Inventory](https://github.com/trickest/inventory) workflow and many other workflows in the Trickest store. Sign up on [trickest.com](https://trickest.com) to get access to these workflows or build your own from scratch!
+
+
+[<img src="./banner.png" />](https://trickest-access.paperform.co/)
