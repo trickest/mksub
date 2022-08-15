@@ -1,4 +1,4 @@
-<h1 align="center">mksub <a href="https://twitter.com/intent/tweet?text=mksub%20-%20Generate%20tens%20of%20thousands%20of%20subdomain%20combinations%20in%20a%20matter%20of%20seconds%0Ahttps%3A%2F%2Fgithub.com%2Ftrickest%2Fmksub&hashtags=bugbounty,bugbountytips,infosec"><img src="https://img.shields.io/badge/Tweet--lightgrey?logo=twitter&style=social" alt="Tweet" height="20"/></a></h1>
+<h1 align="center">mksub <a href="https://twitter.com/intent/tweet?text=mksub%20-%20Generate%20tens%20of%20thousands%20of%20subdomain%20combinations%20in%20a%20matter%20of%20seconds%20%40trick3st%0Ahttps%3A%2F%2Fgithub.com%2Ftrickest%2Fmksub&hashtags=bugbounty,bugbountytips,infosec"><img src="https://img.shields.io/badge/Tweet--lightgrey?logo=twitter&style=social" alt="Tweet" height="20"/></a></h1>
 <h3 align="center">Generate tens of thousands of subdomain combinations in a matter of seconds</h3>
 
 ![mksub](mksub.png "mksub")
