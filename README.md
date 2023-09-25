@@ -77,4 +77,4 @@ We look forward to any feedback you want to share with us or if you're stuck wit
 Mksub is an integral part of the [Inventory](https://github.com/trickest/inventory) workflow and many other workflows in the Trickest store. Sign up on [trickest.com](https://trickest.com) to get access to these workflows or build your own from scratch!
 
 
-[<img src="./banner.png" />](https://trickest-access.paperform.co/)
+[<img src="./banner.png" />](https://trickest.io/auth/register)
